@@ -11,3 +11,5 @@ djoser==2.2.3
 djangorestframework-simplejwt
 django-filter~=2.4.0
 drf-yasg
+drf-extra-fields
+shortuuid
