@@ -170,10 +170,10 @@ class RecipesSerializer(serializers.ModelSerializer):
         for tag in tags:
             if not Tags.objects.filter(id=tag).exists():
                 raise ValidationError('Тега с таким id не существует.')
-            #if tag in tags_list:
-                #raise ValidationError(
-                    #'Повторение тега в одном рецепте недопустимо.')
-            #tags_list.append(tag)
+            if tag in tags_list:
+                raise ValidationError(
+                    'Повторение тега в одном рецепте недопустимо.')
+            tags_list.append(tag)
         return tags
 
     def create_ingredients(self, ingredients, recipe):
