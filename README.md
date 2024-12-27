@@ -36,7 +36,7 @@ docker compose -f docker-compose.production.yml up
 ```
 docker compose -f docker-compose.production.yml exec backend python manage.py migrate
 docker compose -f docker-compose.production.yml exec backend python manage.py createsuperuser
-docker compose -f docker-compose.production.yml exec backend python manage.py loaddata db.json
+docker compose -f docker-compose.production.yml exec backend python manage.py load_fixtures ingredients.json ingredients
 docker compose -f docker-compose.production.yml exec backend python manage.py collectstatic
 docker compose -f docker-compose.production.yml exec backend cp -r /app/collected_static/. /static/static/
 ```
@@ -77,7 +77,7 @@ location / {
 ```TELEGRAM_TOKEN``` - токен телеграм бота
 
 ---
-#### Запуск проекта на локально
+#### Запуск проекта локально
 1) Клонируйте репозиторий:
 ```
 git clone git@github.com:isemavin/foodgram.git
@@ -102,7 +102,7 @@ ALLOWED_HOSTS=<хосты>
 ```
 5) Выполните миграции и создайте суперпользователя:
 ```python manage.py migrate``` ```python manage.py createsuperuser```
-6) Загрузка фиустур: ```python manage.py loaddata db.json```
+6) Загрузка фиустур: ```python manage.py load_fixtures ingredients.json ingredients```
 7) Запуск сервера ```python manage.py runserver```
 Документация будет доступна по адресу: http://localhost/api/docs/
 ---
