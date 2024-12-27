@@ -15,7 +15,8 @@ from recipes.models import (Tags, Ingredients, Recipes, ShoppingCart,
                             Favorites, RecipeIngredient)
 from api.permissions import IsAuthenticatedOrReadOnly
 from api.serializers import (TagsSerializer, IngredientsSerializer,
-                             RecipesSerializer, ShortRecipeSerializer)
+                             RecipesSerializer)
+from users.serializers import ShortRecipeSerializer
 from api.filters import IngredientFilter, RecipeFilter
 
 

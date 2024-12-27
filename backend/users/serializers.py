@@ -4,11 +4,19 @@ from rest_framework import status
 from django.contrib.auth import get_user_model
 from drf_extra_fields.fields import Base64ImageField
 
-from users.models import (User, Subscriptions)
-from api.serializers import (ShortRecipeSerializer)
+from users.models import User, Subscriptions
+from recipes.models import Recipes
 
 
 user = get_user_model()
+
+
+class ShortRecipeSerializer(serializers.ModelSerializer):
+    image = Base64ImageField()
+
+    class Meta:
+        model = Recipes
+        fields = ['id', 'name', 'image', 'cooking_time']
 
 
 class UserSerializer(serializers.ModelSerializer):

@@ -120,11 +120,3 @@ class RecipesSerializer(serializers.ModelSerializer):
         instance.tags.set(tags)
         instance.save()
         return instance
-
-
-class ShortRecipeSerializer(serializers.ModelSerializer):
-    image = Base64ImageField()
-
-    class Meta:
-        model = Recipes
-        fields = ['id', 'name', 'image', 'cooking_time']
