@@ -1,95 +1,11 @@
 from rest_framework import serializers
 from rest_framework.serializers import ValidationError
 from django.db.models import F
-from django.contrib.auth import get_user_model
 from drf_extra_fields.fields import Base64ImageField
 
-from api.models import (User, Tags, Ingredients, Recipes, Subscriptions,
-                        Favorites, ShoppingCart, RecipeIngredient)
-
-
-user = get_user_model()
-
-
-class UserSerializer(serializers.ModelSerializer):
-    is_subscribed = serializers.SerializerMethodField()
-    avatar = serializers.ImageField(read_only=True, allow_null=True)
-
-    class Meta:
-        model = user
-        fields = (
-            'id',
-            'email',
-            'username',
-            'avatar',
-            'first_name',
-            'last_name',
-            'is_subscribed',
-        )
-        read_only_fields = ('id', 'is_subscribed')
-
-    def get_is_subscribed(self, obj):
-        user = self.context['request'].user
-        if user.is_anonymous:
-            return False
-        return Subscriptions.objects.filter(
-            subscriber=user, subscribed_to=obj).exists()
-
-
-class SubscribeSerializer(serializers.ModelSerializer):
-    is_subscribed = serializers.SerializerMethodField()
-    recipes = serializers.SerializerMethodField()
-    recipes_count = serializers.SerializerMethodField()
-
-    class Meta:
-        model = user
-        fields = (
-            'id',
-            'email',
-            'username',
-            'avatar',
-            'first_name',
-            'last_name',
-            'is_subscribed',
-            'recipes',
-            'recipes_count'
-        )
-        read_only_fields = ('email', 'username', 'first_name', 'last_name')
-
-    def get_is_subscribed(self, obj):
-        user = self.context['request'].user
-        if user.is_anonymous:
-            return False
-        return Subscriptions.objects.filter(
-            subscriber=user, subscribed_to=obj).exists()
-
-    def get_recipes(self, obj):
-        request = self.context.get('request')
-        limit = request.GET.get('recipes_limit')
-        if limit:
-            recipes = obj.recipes.all()[:int(limit)]
-        else:
-            recipes = obj.recipes.all()
-        serializer = ShortRecipeSerializer(recipes, many=True, read_only=True)
-        return serializer.data
-
-    def get_recipes_count(self, obj):
-        return obj.recipes.count()
-
-
-class AvatarSerializer(serializers.ModelSerializer):
-    avatar = Base64ImageField(use_url='avatar', required=True)
-
-    class Meta:
-        model = User
-        fields = ['avatar']
-
-    def update(self, instance, validated_data):
-        avatar = validated_data.pop('avatar', None)
-        if avatar:
-            instance.avatar = avatar
-            instance.save()
-        return super().update(instance, validated_data)
+from recipes.models import (Tags, Ingredients, Recipes, Favorites,
+                            ShoppingCart, RecipeIngredient)
+from users.serializers import UserSerializer
 
 
 class TagsSerializer(serializers.ModelSerializer):

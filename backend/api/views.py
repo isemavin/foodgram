@@ -1,127 +1,22 @@
 from django.db.models import Sum
-from django.http import Http404, HttpResponse
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from djoser.views import UserViewSet as BaseUserViewSet
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status, exceptions
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
 import shortuuid
 
-from api.models import (User, Tags, Ingredients, Recipes, ShoppingCart,
-                        Subscriptions, Favorites, RecipeIngredient)
+from recipes.models import (Tags, Ingredients, Recipes, ShoppingCart,
+                            Favorites, RecipeIngredient)
 from api.permissions import IsAuthenticatedOrReadOnly
-from api.serializers import (UserSerializer, TagsSerializer,
-                             IngredientsSerializer, AvatarSerializer,
-                             RecipesSerializer, ShortRecipeSerializer,
-                             SubscribeSerializer)
-from api.pagination import CustomPageNumberPagination
+from api.serializers import (TagsSerializer, IngredientsSerializer,
+                             RecipesSerializer, ShortRecipeSerializer)
 from api.filters import IngredientFilter, RecipeFilter
-
-
-class UserViewSet(BaseUserViewSet):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-    pagination_class = CustomPageNumberPagination
-    permission_classes = [AllowAny]
-
-    @action(detail=False, methods=['get'],
-            permission_classes=[IsAuthenticated])
-    def me(self, request):
-        user_data = {
-            'id': request.user.id,
-            'username': request.user.username,
-            'email': request.user.email,
-            'first_name': request.user.first_name,
-            'last_name': request.user.last_name,
-            'avatar': (
-                str(request.user.avatar.url) if request.user.avatar else ''),
-            'is_subscribed': False,
-        }
-        return Response(user_data)
-
-    @action(detail=True, methods=['PUT', 'DELETE'],
-            permission_classes=[IsAuthenticated])
-    def avatar(self, request, *args, **kwargs):
-        user = request.user
-        if request.method == 'PUT':
-            serializer = AvatarSerializer(user, data=request.data)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            else:
-                return Response(serializer.errors,
-                                status=status.HTTP_400_BAD_REQUEST)
-
-        elif request.method == 'DELETE':
-            user.avatar = None
-            user.save(update_fields=['avatar'])
-            return Response(status=status.HTTP_204_NO_CONTENT)
-
-    @action(detail=True, methods=['POST', 'DELETE'],
-            permission_classes=[IsAuthenticated])
-    def subscribe(self, request, *args, **kwargs):
-        subscriber = request.user
-        subscribed_to = get_object_or_404(User, id=self.kwargs.get('id'))
-
-        if request.method == 'POST':
-            if subscriber == subscribed_to:
-                raise exceptions.ValidationError(
-                    'Вы не можете подписаться на самого себя.')
-            if Subscriptions.objects.filter(subscriber=subscriber,
-                                            subscribed_to=subscribed_to
-                                            ).exists():
-                raise exceptions.ValidationError(
-                    'Вы уже подписаны на этого пользователя.')
-            Subscriptions.objects.create(subscriber=subscriber,
-                                         subscribed_to=subscribed_to)
-            serializer = SubscribeSerializer(instance=subscribed_to,
-                                             context={'request': request})
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        elif request.method == 'DELETE':
-            try:
-                subscription = Subscriptions.objects.get(
-                    subscriber=subscriber,
-                    subscribed_to=subscribed_to)
-                subscription.delete()
-                return Response(status=status.HTTP_204_NO_CONTENT)
-            except Subscriptions.DoesNotExist:
-                return Response({'detail': 'Подписка не найдена.'},
-                                status=status.HTTP_400_BAD_REQUEST)
-
-    @action(detail=False, methods=['get'],
-            permission_classes=[IsAuthenticated])
-    def subscriptions(self, request):
-        user = request.user
-        queryset = User.objects.filter(subscribers__subscriber=user)
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = SubscribeSerializer(page, many=True,
-                                             context={'request': request})
-            return self.get_paginated_response(serializer.data)
-        serializer = SubscribeSerializer(queryset, many=True,
-                                         context={'request': request})
-        return Response(serializer.data)
-
-    def get_object(self, id):
-        if id == 'me':
-            return self.request.user
-        else:
-            try:
-                return self.queryset.get(id=id)
-            except (User.DoesNotExist, ValueError):
-                raise Http404
-
-    def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object(kwargs.get('id'))
-        serializer = self.get_serializer(instance,
-                                         context={'request': request})
-        return Response(serializer.data)
 
 
 class TagsViewSet(ReadOnlyModelViewSet):
@@ -206,11 +101,13 @@ class RecipesViewSet(ModelViewSet):
             permission_classes=[IsAuthenticated])
     def download_shopping_cart(self, request):
         user = request.user
-        if not user.shopping_cart.exists():
+        try:
+            ShoppingCart.objects.get(user=user)
+        except ShoppingCart.DoesNotExist:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
         ingredients = RecipeIngredient.objects.filter(
-            recipe__shopping_cart__user=request.user).values(
+            recipe__shoppingcart__user=user).values(
                 'ingredient__name',
                 'ingredient__measurement_unit'
         ).annotate(amount=Sum('amount'))
