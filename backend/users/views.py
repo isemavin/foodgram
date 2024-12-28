@@ -65,16 +65,15 @@ class UserViewSet(BaseUserViewSet):
             response_data['recipes_count'] = subscriber.recipes.count()
             return Response(response_data, status=status.HTTP_201_CREATED)
 
-        if request.method == 'DELETE':
-            try:
-                subscription = Subscriptions.objects.get(
-                    subscriber=subscriber,
-                    subscribed_to=subscribed_to)
-                subscription.delete()
-                return Response(status=status.HTTP_204_NO_CONTENT)
-            except Subscriptions.DoesNotExist:
-                return Response({'detail': 'Подписка не найдена.'},
-                                status=status.HTTP_400_BAD_REQUEST)
+        try:
+            subscription = Subscriptions.objects.get(
+                subscriber=subscriber,
+                subscribed_to=subscribed_to)
+            subscription.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Subscriptions.DoesNotExist:
+            return Response({'detail': 'Подписка не найдена.'},
+                            status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=['get'],
             permission_classes=[IsAuthenticated])
